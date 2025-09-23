@@ -80,3 +80,23 @@ kalloc(void)
     memset((char*)r, 5, PGSIZE); // fill with junk
   return (void*)r;
 }
+
+//Will calculate the number of pages
+//Iterate thru kmem.freelist and count how many elements(pages) are in the list
+int
+kfreec(){
+  int freeAmt = 0;
+  struct run *page;
+  page = kmem.freelist;
+
+  acquire(&kmem.lock);
+
+  while(page != 0){
+    freeAmt++;
+    page = page->next;
+  }
+
+  release(&kmem.lock);
+
+  return freeAmt;
+}

@@ -105,3 +105,10 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+//FUnction stub that invokes the kernel space portion of system call
+uint64
+sys_freec(void)
+{
+  return kfreec();
+}
