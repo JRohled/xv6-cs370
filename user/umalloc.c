@@ -88,3 +88,161 @@ malloc(uint nbytes)
         return 0;
   }
 }
+
+/*Returns number of bytes allocated but not used*/
+uint64 frag_bytes(void)
+{
+  Header *p;
+  uint64 freeBytes = 0;
+
+  if(freep == 0) return 0;
+
+  freeBytes += freep->s.size * sizeof(Header);
+  p = freep->s.ptr;
+  while(p != freep){
+    freeBytes += p->s.size * sizeof(Header);
+    p = p->s.ptr;
+  }
+
+
+
+return freeBytes;
+}
+
+typedef struct Chunk{
+  struct Chunk *next;
+} Chunk;
+
+typedef struct Page{
+  int chunk_size;
+  struct Page *next; 
+  Chunk *free_chunks; //Free list of chunks
+  char data[4096]; //All the bytes in the page(will be divided into chunks)
+} Page;
+
+static Page *pList;
+
+/* Allocates nbytes from a segregated list*/
+void* block_alloc(int nbytes)
+{
+  int pageSize = 4096; // Used for sbrk()
+  int chunkSize = 1; // Size of every chunk in a page
+  int chunkAmt = 0; // Num of chunks in a page
+  
+  
+  // Check if bytes evenly divides page size
+  while(chunkSize < nbytes){
+    chunkSize *= 2;
+  }
+  printf("Finding page divided with chunks of size: %d\n", chunkSize);
+
+  Page *p;
+  Chunk *c;
+  Chunk *cUsing; //Chunk to return
+  int makeNewpg = 1;
+  p = pList;
+  //Find Page With Chunk Size
+  while(p){
+    printf("Page Chunk size: %d\n", p->chunk_size);
+    if(p->chunk_size == chunkSize){
+      c = p->free_chunks;
+
+      // Free space in page?
+      if(!c){
+        printf("p->freechunks NULL\n");
+        p = p->next;
+        continue;
+      }
+
+      printf("Free chunk(s) in page: %p\n", p);
+
+      //Use first available free chunk and move next to head(p->free_chunks)
+      cUsing = c;
+      p->free_chunks = c->next;
+      makeNewpg = 0;
+      break;
+    }
+    p = p->next;
+  }
+  
+  //If none exist or all are full, create new page
+  if(makeNewpg){
+    p = (Page *) sbrk(pageSize);
+    if((char *)p == SBRK_ERROR)
+      return 0;
+    printf("Making new Page at %p\n", (void *)p);
+    p->chunk_size = chunkSize;
+    p->next = 0;
+    char *dPtr = p->data;
+    
+    Chunk *cPrev = (Chunk *) dPtr;
+    for(int i = 1; i < chunkAmt; i++){
+      Chunk *cNew = (Chunk *)(dPtr + i * chunkSize);
+      printf("Chunk %d at %p\n", i, cNew);
+      cPrev->next = cNew;
+      cPrev = cNew;
+    }
+    cPrev->next = 0;
+
+    p->free_chunks = (Chunk *) dPtr;
+    cUsing = p->free_chunks;
+    p->free_chunks = cUsing->next;
+
+    //Add new page to page list
+    Page *pg = pList;
+    Page *pgPrev;
+    if(!pg){
+      //Page list empty
+      pList = p;
+    }else{
+      //Not empty
+      while(pg){
+        pgPrev = pg;
+        pg = pg->next;
+      }
+      pgPrev->next = p;
+      printf("pList starts with: %p\n", pList);
+      printf("pList ends wtih: %p\n\n", p);
+
+    }
+
+  }
+  
+  return (void *) cUsing;
+}
+
+/* Frees an allocation made from a segregated list*/
+void block_free(void *ptr)
+{
+  Page *p = pList;
+  //Find page ptr belongs to
+  while(p){
+    if((char *)ptr >= (char *)p->data && (char *)ptr < (char *)p->data + 4096){
+      break;
+    }
+    p = p->next;
+  }
+
+  //Add chunk back to free list
+  Chunk *c = (Chunk *) ptr;
+  c->next = p->free_chunks;
+  p->free_chunks = c;
+
+}
+
+uint64 frag_bytes_segList()
+{
+  Page *p = pList;
+  uint64 freeB = 0;
+
+  while(p){
+    Chunk *c = p->free_chunks;
+    while(c){
+      freeB += (uint64) p->chunk_size;
+      c = c->next;
+    }
+    p = p->next;
+  }
+
+  return freeB;
+}

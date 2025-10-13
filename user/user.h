@@ -47,3 +47,7 @@ void printf(const char*, ...) __attribute__ ((format (printf, 1, 2)));
 // umalloc.c
 void* malloc(uint);
 void free(void*);
+uint64 frag_bytes(void);
+void* block_alloc(int nbytes);
+void block_free(void *);
+uint64 frag_bytes_segList(void);
