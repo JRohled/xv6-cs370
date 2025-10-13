@@ -104,9 +104,7 @@ uint64 frag_bytes(void)
     p = p->s.ptr;
   }
 
-
-
-return freeBytes;
+  return freeBytes;
 }
 
 typedef struct Chunk{
@@ -134,7 +132,6 @@ void* block_alloc(int nbytes)
   while(chunkSize < nbytes){
     chunkSize *= 2;
   }
-  printf("Finding page divided with chunks of size: %d\n", chunkSize);
 
   Page *p;
   Chunk *c;
@@ -143,18 +140,14 @@ void* block_alloc(int nbytes)
   p = pList;
   //Find Page With Chunk Size
   while(p){
-    printf("Page Chunk size: %d\n", p->chunk_size);
     if(p->chunk_size == chunkSize){
       c = p->free_chunks;
 
       // Free space in page?
       if(!c){
-        printf("p->freechunks NULL\n");
         p = p->next;
         continue;
       }
-
-      printf("Free chunk(s) in page: %p\n", p);
 
       //Use first available free chunk and move next to head(p->free_chunks)
       cUsing = c;
@@ -170,7 +163,6 @@ void* block_alloc(int nbytes)
     p = (Page *) sbrk(pageSize);
     if((char *)p == SBRK_ERROR)
       return 0;
-    printf("Making new Page at %p\n", (void *)p);
     p->chunk_size = chunkSize;
     p->next = 0;
     char *dPtr = p->data;
@@ -178,7 +170,6 @@ void* block_alloc(int nbytes)
     Chunk *cPrev = (Chunk *) dPtr;
     for(int i = 1; i < chunkAmt; i++){
       Chunk *cNew = (Chunk *)(dPtr + i * chunkSize);
-      printf("Chunk %d at %p\n", i, cNew);
       cPrev->next = cNew;
       cPrev = cNew;
     }
@@ -201,9 +192,6 @@ void* block_alloc(int nbytes)
         pg = pg->next;
       }
       pgPrev->next = p;
-      printf("pList starts with: %p\n", pList);
-      printf("pList ends wtih: %p\n\n", p);
-
     }
 
   }

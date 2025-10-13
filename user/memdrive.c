@@ -10,7 +10,7 @@
 int main()
 {
     /*  Reg Alloc */
-    int allocAmt = 5; // num of KB to allocate
+    int allocAmt = 64;// num of KB to allocate
     int kilaByte = 1024; // Size of KB in bytes
     void *allocated[allocAmt]; // Array to store allocated block pointers
 
