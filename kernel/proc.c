@@ -1,3 +1,31 @@
+//ALL functions that can access proc[NPROC] array are in this file
+//If need to access proc array,
+//  Can create system call that uses a function in this file(Look at fork/wait/exit)
+/*
+  Uses Round Robin scheduler by default
+    - Assigns time slices each process in equal portion
+    - Process is interupted if not completed in given slice and sent back to queue
+    - Default Time Slice = 100 ticks
+*/
+//Context Switch: Switching processes involves saving the old process' CPU registers 
+// and restoring previously saved registers of new process
+//Stack and PC of old process are saved and the new process' are restored
+//CPU switches stack and which code to execute
+
+/*
+  Context Switch Function
+    - Performs saves and restores for kernel process swtich ONLY
+    - Doesn't directly know about processes
+    - ONLY saves and restores register sets called contexts
+    - When process gives up CPU, process' kernel thread calls the context switch 
+      to save its context and load the scheduler context
+    - Contexts are either held in a 
+      struct context(proc.h), process struct proc, or CPU's struct cpu
+    - ContextSwitch() takes 2 args:
+        *old and struct context *new
+    - Saves current registers in *old
+    - Loads registers from *new and returns
+  */ 
 #include "types.h"
 #include "param.h"
 #include "memlayout.h"
@@ -8,7 +36,11 @@
 
 struct cpu cpus[NCPU];
 
-struct proc proc[NPROC];
+
+//Every process is stored in a PCB called struct proc {};
+//proc[NPROC] is the PCB with NPROC = 64
+//Tracks processes with max of 64
+struct proc proc[NPROC]; //Static Array
 
 struct proc *initproc;
 
