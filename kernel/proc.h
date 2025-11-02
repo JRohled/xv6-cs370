@@ -105,6 +105,8 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 
-  int priority;               // 
-  int num_epoch_slots;        //
+  int priority;               // Value for priority_fork syscall 
+  int num_epoch_slots;        // 
 };
+
+int mode = 0; //Indicates whether in run(0) or debug mode(1)

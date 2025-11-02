@@ -105,3 +105,35 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+void 
+sys_debug(int enable) 
+{
+  //Sets the system level debug to the enable parameter
+  //enable != 0 -> debug mode on
+  if(enable == 0){
+    mode = 0;
+  }else if(enable == 1){
+    mode = 1;
+  }else{
+    printf("Error Invalid value for enable");
+    return;
+  }
+}
+
+/*
+  TO-DO:
+  Implement a new scheduler that accpets priority as an arg.
+  Same as fork() except the accepted arg is set 
+  as the priority in the PCB of the new process(Range: 0 - 19).
+  Return error if <0 or >19. 
+  Value of num_epoch_slots = 0
+  
+*/
+uint64
+sys_priority_fork(int priority) 
+{
+  int x = 0;
+
+  return x;
+} 

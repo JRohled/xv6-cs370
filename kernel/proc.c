@@ -178,6 +178,9 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+  p->priority = 10;
+  p->num_epoch_slots = 0;
+
   return p;
 }
 
@@ -304,6 +307,10 @@ kfork(void)
     return -1;
   }
   np->sz = p->sz;
+
+  //Setting default Values
+  np->priority = 10;
+  np->num_epoch_slots = 0;
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
@@ -450,6 +457,13 @@ kwait(uint64 addr)
 //  - swtch to start running that process.
 //  - eventually that process transfers control
 //    via swtch back to the scheduler.
+/*
+  TO-DO:
+    Update round robin scheduler to use mode variable:
+      - Run Mode(0) executes normally
+      - Debug Mode(1) Displays the selected process 
+        and its priority at each time slot on the terminal
+*/
 void
 scheduler(void)
 {
@@ -488,6 +502,19 @@ scheduler(void)
       // nothing to run; stop running on this core until an interrupt.
       asm volatile("wfi");
     }
+  }
+}
+
+void 
+propFairScheduler(void)
+{
+  struct proc *p;
+  struct cpu *c = mycpu();
+
+  c->proc = 0;
+
+  for(;;){
+    
   }
 }
 
