@@ -528,9 +528,6 @@ scheduler(void)
 void 
 propFairScheduler(void)
 {
-  intr_on();
-  intr_off();
-
   struct proc *p;
   struct cpu *c = mycpu();
   int sum;
@@ -538,6 +535,9 @@ propFairScheduler(void)
   c->proc = 0;
 
   for(;;){
+    intr_on();
+    intr_off();  
+    
     //--- Find number of time slots allocated to each process within epoch ----
     //time slots = 40 * 20 - priority / For all processes, (20 - p) + (20 - p)...
     sum = 0;
@@ -565,13 +565,28 @@ propFairScheduler(void)
     */
     int found = 0;
     for(p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+      if(p->state == RUNNABLE && p->num_epoch_slots > 0) {
+        if(mode == 1) {
+          printf("PID %d running (priority %d) %d epochs remaining\n", 
+            p->pid, p->priority, p->num_epoch_slots);
+        }
 
+        p->state = RUNNING;
+        c->proc = p;
+        swtch(&c->context, &p->context);
+
+        c->proc = 0;
+        found = 1;
+        p->num_epoch_slots--;
+
+      }
+      release(&p->lock);
     }
 
-    //if(found == 0) {
-      // nothing to run; stop running on this core until an interrupt.
-     // asm volatile("wfi");
-    //}
+    if(found == 0) {
+      asm volatile("wfi");
+    }
 
     if(mode == 1) {
       printf("+------- Starting New Epoch -------+\n");
