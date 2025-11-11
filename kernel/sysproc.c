@@ -112,9 +112,9 @@ sys_debug(int enable)
   //Sets the system level debug to the enable parameter
   //enable != 0 -> debug mode on
   if(enable == 0){
-    mode = 0;
+    mode = 0; // Run
   }else if(enable == 1){
-    mode = 1;
+    mode = 1; // Debug
   }else{
     printf("Error Invalid value for enable");
     return;
@@ -133,7 +133,13 @@ sys_debug(int enable)
 uint64
 sys_priority_fork(int priority) 
 {
-  int x = 0;
+  if(priority < 0) {
+    printf("\nPriority is out of range: Lower than 0");
+    return -1;
+  }else if(priority > 19) {
+    printf("\nPriority is out of range: Higher than 19");
+    return -1;
+  }
 
-  return x;
+  return priority_fork(priority);
 } 

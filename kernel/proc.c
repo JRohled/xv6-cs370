@@ -308,7 +308,7 @@ kfork(void)
   }
   np->sz = p->sz;
 
-  //Setting default Values
+  //ADDED Setting default Values
   np->priority = 10;
   np->num_epoch_slots = 0;
 
@@ -487,6 +487,13 @@ scheduler(void)
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
+        //ADDED
+        if(mode == 1) {
+          printf("PID %d running (priority %d) %d epochs remaining\n", 
+            p->pid, p->priority, p->num_epoch_slots);
+        }
+        //---------------
+
         p->state = RUNNING;
         c->proc = p;
         swtch(&c->context, &p->context);
@@ -502,20 +509,124 @@ scheduler(void)
       // nothing to run; stop running on this core until an interrupt.
       asm volatile("wfi");
     }
+    printf("---------- Starting New Epoch -----------\n");
   }
 }
 
+
+/*
+  TODO:
+  - First computes the number of time slots allocated 
+  to each process within an epoch and updates num_epoch accordingly
+  - During epoch, scheduler iterate thru proc array 
+  identifying the next runnable process with num_epoch > 0.
+  - The next runnable process is executed on processor for multiple time slots
+      - Here the number of times slots == num_epoch_slots
+  - Restart epoch when reach end of proc array
+  - NOTE: This may restart epoch earlier than 40 times slots, but thats okay
+*/
 void 
 propFairScheduler(void)
 {
+  intr_on();
+  intr_off();
+
   struct proc *p;
   struct cpu *c = mycpu();
+  int sum;
 
   c->proc = 0;
 
   for(;;){
-    
+    //--- Find number of time slots allocated to each process within epoch ----
+    //time slots = 40 * 20 - priority / For all processes, (20 - p) + (20 - p)...
+    sum = 0;
+    for(p = proc; p < &proc[NPROC]; p++) {
+      if(p->state == RUNNABLE || p->state == RUNNING) {
+        //Get summmation (20 - pi)
+        sum += (20 - p->priority);
+      } 
+    }
+    for(p = proc; p < &proc[NPROC]; p++) {
+      if(p->state == RUNNABLE || p->state == RUNNING) {
+        int timeSlots = (20 - p->priority) / sum;
+        timeSlots *= 40;
+        p->num_epoch_slots = timeSlots;
+      }
+    }
+    //  +   ----------------------------------  +
+    /*Find next proc with num_epoch greater than 0
+        - Execute that proc
+        - Time slots == num_epoch_slots
+      After reaching end of proc array, epoch restarted
+      DEBUG MODE: 
+        - Print when epoch starts
+        - For each time slot, print PID of exec proc and its priority
+    */
+    int found = 0;
+    for(p = proc; p < &proc[NPROC]; p++) {
+
+    }
+
+    //if(found == 0) {
+      // nothing to run; stop running on this core until an interrupt.
+     // asm volatile("wfi");
+    //}
+
+    if(mode == 1) {
+      printf("+------- Starting New Epoch -------+\n");
+    }
   }
+}
+
+//Priority_fork syscall
+int
+priority_fork(int priority) {
+  int pid;
+  struct proc* np;
+  struct proc* p = myproc();
+
+  if((np = allocproc()) == 0) {
+    return -1;
+  }
+
+  //Copy user memory
+  if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
+    freeproc(np);
+    release(&np->lock);
+    return -1;
+  }
+  np->sz = p->sz;
+
+  np->priority = priority; //Different from kfork()
+  np->num_epoch_slots = 0;
+
+  // copy saved user registers.
+  *(np->trapframe) = *(p->trapframe);
+
+  // Cause fork to return 0 in the child.
+  np->trapframe->a0 = 0;
+
+  // increment reference counts on open file descriptors.
+  for(int i = 0; i < NOFILE; i++)
+    if(p->ofile[i])
+      np->ofile[i] = filedup(p->ofile[i]);
+  np->cwd = idup(p->cwd);
+
+  safestrcpy(np->name, p->name, sizeof(p->name));
+
+  pid = np->pid;
+
+  release(&np->lock);
+
+  acquire(&wait_lock);
+  np->parent = p;
+  release(&wait_lock);
+
+  acquire(&np->lock);
+  np->state = RUNNABLE;
+  release(&np->lock);
+  return pid;
 }
 
 // Switch to scheduler.  Must hold only p->lock
