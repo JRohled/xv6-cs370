@@ -36,6 +36,7 @@
 
 struct cpu cpus[NCPU];
 
+int mode = 0;
 
 //Every process is stored in a PCB called struct proc {};
 //proc[NPROC] is the PCB with NPROC = 64
@@ -46,6 +47,8 @@ struct proc *initproc;
 
 int nextpid = 1;
 struct spinlock pid_lock;
+
+struct spinlock printLock; //ADDED
 
 extern void forkret(void);
 static void freeproc(struct proc *p);
@@ -83,6 +86,7 @@ procinit(void)
   
   initlock(&pid_lock, "nextpid");
   initlock(&wait_lock, "wait_lock");
+  initlock(&printLock, "printLock");
   for(p = proc; p < &proc[NPROC]; p++) {
       initlock(&p->lock, "proc");
       p->state = UNUSED;
@@ -489,8 +493,8 @@ scheduler(void)
         // before jumping back to us.
         //ADDED
         if(mode == 1) {
-          printf("PID %d running (priority %d) %d epochs remaining\n", 
-            p->pid, p->priority, p->num_epoch_slots);
+          printf("PID %d running (priority %d)\n", 
+            p->pid, p->priority);
         }
         //---------------
 
@@ -509,7 +513,10 @@ scheduler(void)
       // nothing to run; stop running on this core until an interrupt.
       asm volatile("wfi");
     }
-    printf("---------- Starting New Epoch -----------\n");
+    if(mode == 1) {
+      printf("---------- Starting New Epoch -----------\n"); 
+    }
+    
   }
 }
 
@@ -537,7 +544,7 @@ propFairScheduler(void)
   for(;;){
     intr_on();
     intr_off();  
-    
+    int usedSlots = 0;
     //--- Find number of time slots allocated to each process within epoch ----
     //time slots = 40 * 20 - priority / For all processes, (20 - p) + (20 - p)...
     sum = 0;
@@ -549,37 +556,35 @@ propFairScheduler(void)
     }
     for(p = proc; p < &proc[NPROC]; p++) {
       if(p->state == RUNNABLE || p->state == RUNNING) {
-        int timeSlots = (20 - p->priority) / sum;
-        timeSlots *= 40;
+        int timeSlots = (40 *(20 - p->priority)) / sum;
         p->num_epoch_slots = timeSlots;
       }
     }
-    //  +   ----------------------------------  +
-    /*Find next proc with num_epoch greater than 0
-        - Execute that proc
-        - Time slots == num_epoch_slots
-      After reaching end of proc array, epoch restarted
-      DEBUG MODE: 
-        - Print when epoch starts
-        - For each time slot, print PID of exec proc and its priority
-    */
+   
     int found = 0;
     for(p = proc; p < &proc[NPROC]; p++) {
+      if(usedSlots == 40) break;
       acquire(&p->lock);
+      //printf("PID %d has %d epoch slots", p->pid, p->num_epoch_slots);
       if(p->state == RUNNABLE && p->num_epoch_slots > 0) {
-        if(mode == 1) {
-          printf("PID %d running (priority %d) %d epochs remaining\n", 
-            p->pid, p->priority, p->num_epoch_slots);
+        while(p->num_epoch_slots > 0 && (p->state == RUNNABLE || p->state == RUNNING)) {
+          if(mode == 1) {
+            acquire(&printLock);
+            printf("PID %d running (priority %d) %d epochs remaining\n", 
+              p->pid, p->priority, p->num_epoch_slots);
+            release(&printLock);
+          }
+
+          p->state = RUNNING;
+          c->proc = p;
+          swtch(&c->context, &p->context);
+
+          c->proc = 0;
+          found = 1;
+          p->num_epoch_slots--;
+          usedSlots++;
         }
-
-        p->state = RUNNING;
-        c->proc = p;
-        swtch(&c->context, &p->context);
-
-        c->proc = 0;
-        found = 1;
-        p->num_epoch_slots--;
-
+        
       }
       release(&p->lock);
     }
@@ -589,7 +594,9 @@ propFairScheduler(void)
     }
 
     if(mode == 1) {
+      acquire(&printLock);
       printf("+------- Starting New Epoch -------+\n");
+      release(&printLock);
     }
   }
 }

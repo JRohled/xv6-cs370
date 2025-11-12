@@ -110,6 +110,6 @@ struct proc {
   int num_epoch_slots;        // 
 };
 
-int mode = 0; //Indicates whether in run(0) or debug mode(1)
+extern int mode; //Indicates whether in run(0) or debug mode(1)
 
 int priority_fork(int priority);

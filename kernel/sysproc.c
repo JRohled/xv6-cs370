@@ -106,9 +106,11 @@ sys_uptime(void)
   return xticks;
 }
 
-void 
-sys_debug(int enable) 
+uint64 
+sys_debug(void) 
 {
+  int enable;
+  argint(0, &enable);
   //Sets the system level debug to the enable parameter
   //enable != 0 -> debug mode on
   if(enable == 0){
@@ -117,8 +119,9 @@ sys_debug(int enable)
     mode = 1; // Debug
   }else{
     printf("Error Invalid value for enable");
-    return;
+    return -1;
   }
+  return 0;
 }
 
 /*
@@ -131,8 +134,10 @@ sys_debug(int enable)
   
 */
 uint64
-sys_priority_fork(int priority) 
+sys_priority_fork(void) 
 {
+  int priority; 
+  argint(0, &priority);
   if(priority < 0) {
     printf("\nPriority is out of range: Lower than 0");
     return -1;

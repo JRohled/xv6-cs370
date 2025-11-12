@@ -22,7 +22,7 @@
     LIMIT must be >= 1 million
     Reset mode to run when all child processes terminate
 */
-const int LIMIT = 10000000; //Max compute num
+const int LIMIT = 1000000; //Max compute num
 
 int findArm(int num);
 
@@ -40,7 +40,10 @@ int main(){
             }else if(pid == 0) {
                 //Inside child process
                 count = findArm(2);
+                
+                //pause(10);
                 printf("Child PID %d (priority %d) found %d Armstrong Numbers\n", getpid(), 5*i, count);
+                
                 exit(0);
             }
         }
@@ -48,9 +51,13 @@ int main(){
 
     //Parent waits for children to end
     for(int k = 0; k < 8; k++) {
+        //int status;
+        //int cPID = wait(&status);
+        //printf("\nChild PID %d found %d Armstrong Numbers\n", cPID, status);
         wait(0);
     }
 
+    debug(0);
     return 0;    
 }
 

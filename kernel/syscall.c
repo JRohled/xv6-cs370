@@ -102,8 +102,8 @@ extern uint64 sys_link(void);
 extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
 //ADDED
-extern void sys_debug(int);
-extern uint64 sys_priority_fork(int);
+extern uint64 sys_debug(void);
+extern uint64 sys_priority_fork(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
